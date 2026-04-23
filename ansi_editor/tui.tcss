@@ -1,0 +1,43 @@
+Screen {
+    background: rgb(20, 20, 25);
+    color: rgb(220, 220, 220);
+}
+
+#body { height: 1fr; }
+
+#canvas-col {
+    width: 1fr;
+    height: 1fr;
+    padding: 0 1;
+}
+
+CanvasView {
+    width: 1fr;
+    height: 1fr;
+    border: round rgb(80, 90, 110);
+    background: rgb(10, 10, 12);
+}
+
+#side {
+    width: 34;
+    height: 1fr;
+    padding: 0 1;
+}
+
+#side > Static {
+    border: round rgb(60, 70, 90);
+    padding: 0 1;
+    margin-bottom: 1;
+}
+
+ToolsPanel { height: auto; min-height: 12; }
+BrushPanel { height: auto; min-height: 8; }
+LayersPanel { height: auto; min-height: 7; }
+FramesPanel { height: auto; min-height: 5; }
+
+#flash-bar {
+    height: 1;
+    background: rgb(30, 30, 40);
+    color: rgb(200, 200, 200);
+    padding: 0 1;
+}

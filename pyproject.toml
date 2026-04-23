@@ -1,0 +1,20 @@
+[project]
+name = "ansi-editor-tui"
+version = "0.1.0"
+description = "Terminal-native ANSI/ASCII art editor, Durdraw-compatible, built on Textual."
+requires-python = ">=3.10"
+dependencies = [
+    # Textual 9+ may change the Widget._render() contract in ways we rely on.
+    # Cap at major version until we've re-verified.
+    "textual>=0.80,<10",
+]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["ansi_editor"]
+
+[tool.setuptools.package-data]
+ansi_editor = ["tui.tcss"]

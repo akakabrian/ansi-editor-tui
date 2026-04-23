@@ -1,0 +1,19 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+build/
+dist/
+
+# Vendor reference (Durdraw) — keep out of git, `make bootstrap` re-clones.
+/engine/
+
+# QA harness artefacts
+tests/out/*.svg
+tests/out/*.txt
+
+# User scratch saves
+*.dur
+*.ans
+!tests/data/*.dur
+!tests/data/*.ans
