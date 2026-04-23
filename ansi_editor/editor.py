@@ -140,7 +140,11 @@ class Editor:
         return []
 
     def tool_release(self) -> list[Edit]:
-        """Mouse release. Finalize the stroke as an undo batch."""
+        """Mouse release. Finalize the stroke as an undo batch.
+
+        Defensive: a mouse-up that fires without a preceding press (edge case
+        when focus changes mid-drag) must not mutate state. We check the
+        tool's internal pending list and commit an empty batch in that case."""
         tool = self._tool_instance
         batch = tool.commit()
         if self.tool_name in ("line", "rectangle"):

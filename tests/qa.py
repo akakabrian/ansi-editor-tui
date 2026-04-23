@@ -439,6 +439,60 @@ async def s_tool_press_drag_line_preview_replaces(app, pilot):
         assert layer.get(0, y).ch == "L", (y, layer.get(0, y))
 
 
+async def s_mouse_release_without_press_is_safe(app, pilot):
+    """Dropping a mouse-up on an editor that wasn't dragging must be a no-op."""
+    before_undo = len(app.editor._undo)
+    app.editor.tool_release()  # no press/drag preceded
+    assert len(app.editor._undo) == before_undo
+
+
+async def s_undo_past_empty_stack_is_safe(app, pilot):
+    """Spamming undo with nothing to undo must not raise."""
+    for _ in range(5):
+        assert app.editor.undo() is False
+
+
+async def s_delete_last_layer_is_clamped(app, pilot):
+    """A frame must always keep at least one layer — delete_layer on a
+    single-layer frame is a no-op."""
+    # Reduce to one layer, then try to delete again.
+    app.editor.delete_layer()
+    assert len(app.editor.current_frame.layers) == 1
+    app.editor.delete_layer()
+    assert len(app.editor.current_frame.layers) == 1
+
+
+async def s_delete_last_frame_is_clamped(app, pilot):
+    """Must always have at least one frame."""
+    assert app.editor.movie.frame_count == 1
+    app.editor.delete_frame()
+    assert app.editor.movie.frame_count == 1
+
+
+async def s_layer_index_clamps_after_delete(app, pilot):
+    """If we delete a layer while on the top index, current_layer must still
+    resolve (no IndexError)."""
+    app.editor.add_layer()
+    app.editor.layer_index = len(app.editor.current_frame.layers) - 1
+    app.editor.delete_layer()
+    # current_layer must still return a valid Layer.
+    _ = app.editor.current_layer
+
+
+async def s_resize_preserves_old_cells(app, pilot):
+    """Growing a layer keeps old cells intact; shrinking drops them."""
+    app.editor.brush.ch = "K"
+    app.editor.set_cursor(5, 5)
+    app.editor.select_tool("pencil")
+    app.editor.apply_tool_at_cursor()
+    layer = app.editor.current_layer
+    layer.resize(120, 40)
+    assert layer.get(5, 5).ch == "K"
+    layer.resize(4, 4)
+    # (5,5) is now out of bounds — get() returns a default.
+    assert layer.get(5, 5).ch == " "
+
+
 async def s_save_dur_is_gzip(app, pilot):
     """The .dur file must be gzipped (magic bytes 1f 8b) so it opens in
     real Durdraw."""
@@ -480,6 +534,12 @@ SCENARIOS: list[Scenario] = [
     Scenario("animation_two_frames", s_animation_two_frames),
     Scenario("line_preview_revert_on_drag", s_tool_press_drag_line_preview_replaces),
     Scenario("dur_file_is_gzip", s_save_dur_is_gzip),
+    Scenario("mouse_release_without_press_is_safe", s_mouse_release_without_press_is_safe),
+    Scenario("undo_empty_stack_is_safe", s_undo_past_empty_stack_is_safe),
+    Scenario("delete_last_layer_is_clamped", s_delete_last_layer_is_clamped),
+    Scenario("delete_last_frame_is_clamped", s_delete_last_frame_is_clamped),
+    Scenario("layer_index_clamps_after_delete", s_layer_index_clamps_after_delete),
+    Scenario("resize_preserves_old_cells", s_resize_preserves_old_cells),
 ]
 
 

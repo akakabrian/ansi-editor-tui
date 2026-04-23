@@ -219,6 +219,8 @@ class CanvasView(ScrollView):
         self.post_message(self.ToolDrag(spot[0], spot[1]))
 
     def on_mouse_up(self, event: events.MouseUp) -> None:
+        # Guard: mouse-up without prior mouse-down (terminals occasionally
+        # drop events on focus change). Swallow silently.
         if self._dragging:
             self._dragging = False
             self.release_mouse()
