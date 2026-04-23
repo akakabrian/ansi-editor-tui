@@ -32,8 +32,33 @@ CanvasView {
 
 ToolsPanel { height: auto; min-height: 12; }
 BrushPanel { height: auto; min-height: 8; }
+PaletteStripPanel { height: auto; min-height: 5; }
 LayersPanel { height: auto; min-height: 7; }
 FramesPanel { height: auto; min-height: 5; }
+
+#help-box {
+    width: 72;
+    height: auto;
+    background: rgb(20, 20, 28);
+    border: round rgb(120, 140, 200);
+    padding: 1 2;
+}
+
+#save-box {
+    width: 60;
+    height: auto;
+    background: rgb(20, 20, 28);
+    border: round rgb(120, 140, 200);
+    padding: 1 2;
+}
+
+#palette-box, #char-box {
+    width: auto;
+    height: auto;
+    background: rgb(20, 20, 28);
+    border: round rgb(120, 140, 200);
+    padding: 1 2;
+}
 
 #flash-bar {
     height: 1;

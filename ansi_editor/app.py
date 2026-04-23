@@ -31,6 +31,7 @@ from . import charset, palette
 from .canvas import ATTR_BLINK, ATTR_BOLD, ATTR_REVERSE, Cell
 from .editor import Editor
 from .fileio import load_dur, save_ans, save_dur
+from .screens import CharPickerScreen, HelpScreen, PalettePickerScreen, SaveScreen
 from .tools import TOOLS_BY_NAME
 
 
@@ -308,6 +309,56 @@ class LayersPanel(Static):
         self.update(t)
 
 
+class PaletteStripPanel(Static):
+    """16-color strip for quick fg/bg selection. Click swatches:
+      row 0 = fg click, row 1 = bg click."""
+
+    class Pick(Message):
+        def __init__(self, index: int, which: str) -> None:
+            self.index = index
+            self.which = which  # "fg" | "bg"
+            super().__init__()
+
+    def __init__(self, editor: Editor) -> None:
+        super().__init__("")
+        self.editor = editor
+        self.border_title = "PALETTE"
+
+    def refresh_panel(self) -> None:
+        mode = self.editor.movie.color_format
+        t = Text()
+        # Row 1: fg indicator row.
+        t.append("fg ", style="dim")
+        for i in range(16):
+            r, g, b = palette.rgb(i, mode)
+            mark = "▼" if i == self.editor.brush.fg else " "
+            t.append(mark, style=f"white on rgb({r},{g},{b})")
+        t.append("\n")
+        # Row 2: color bar.
+        t.append("   ")
+        for i in range(16):
+            r, g, b = palette.rgb(i, mode)
+            t.append(" ", style=f"on rgb({r},{g},{b})")
+        t.append("\n")
+        # Row 3: bg indicator row.
+        t.append("bg ", style="dim")
+        for i in range(16):
+            r, g, b = palette.rgb(i, mode)
+            mark = "▲" if i == self.editor.brush.bg else " "
+            t.append(mark, style=f"white on rgb({r},{g},{b})")
+        t.append("\n")
+        if mode == "256":
+            t.append("[dim](256-color active — shift f/F + b/B to step)[/]\n")
+        self.update(t)
+
+    def on_click(self, event: events.Click) -> None:
+        # y 0 or 1 → fg; y 2 → bg. x 3..18 maps to palette index 0..15.
+        x = event.x - 3
+        if 0 <= x < 16:
+            which = "fg" if event.y <= 1 else "bg"
+            self.post_message(self.Pick(x, which))
+
+
 class FramesPanel(Static):
     def __init__(self, editor: Editor) -> None:
         super().__init__("")
@@ -333,6 +384,7 @@ class AnsiEditorApp(App):
 
     BINDINGS = [
         Binding("q", "quit", "Quit"),
+        Binding("question_mark", "help", "Help"),
         # Tools
         *[Binding(k, f"select_tool('{n}')", show=False) for k, n, _ in TOOL_ORDER],
         # Cursor — priority so ScrollView doesn't eat them.
@@ -368,7 +420,11 @@ class AnsiEditorApp(App):
         Binding("P",      "play_pause", "Play"),
         # File
         Binding("ctrl+s", "save", "Save"),
+        Binding("s",      "save_as", "SaveAs"),
         Binding("ctrl+o", "load", "Load"),
+        # Pickers
+        Binding("ctrl+p", "palette", "Palette"),
+        Binding("ctrl+g", "char_picker", "Chars"),
         # Char cycle
         Binding("c", "cycle_char(1)",  show=False),
         Binding("C", "cycle_char(-1)", show=False),
@@ -388,6 +444,7 @@ class AnsiEditorApp(App):
         self.canvas_view = CanvasView(self.editor)
         self.tools_panel = ToolsPanel()
         self.brush_panel = BrushPanel(self.editor)
+        self.palette_strip = PaletteStripPanel(self.editor)
         self.layers_panel = LayersPanel(self.editor)
         self.frames_panel = FramesPanel(self.editor)
         self.flash_bar = Static(" ", id="flash-bar")
@@ -405,6 +462,7 @@ class AnsiEditorApp(App):
             with Vertical(id="side"):
                 yield self.tools_panel
                 yield self.brush_panel
+                yield self.palette_strip
                 yield self.layers_panel
                 yield self.frames_panel
         yield Footer()
@@ -421,6 +479,7 @@ class AnsiEditorApp(App):
         self.tools_panel.selected = self.editor.tool_name
         self.tools_panel.refresh_panel()
         self.brush_panel.refresh_panel()
+        self.palette_strip.refresh_panel()
         self.layers_panel.refresh_panel()
         self.frames_panel.refresh_panel()
 
@@ -510,6 +569,14 @@ class AnsiEditorApp(App):
 
     def on_tools_panel_selected(self, msg: ToolsPanel.Selected) -> None:
         self.action_select_tool(msg.name)
+
+    def on_palette_strip_panel_pick(self, msg: PaletteStripPanel.Pick) -> None:
+        if msg.which == "fg":
+            self.editor.brush.fg = msg.index
+        else:
+            self.editor.brush.bg = msg.index
+        self._refresh_side_panels()
+        self.flash(f"[bold]{msg.which}[/] → {msg.index} ({palette.color_name(msg.index)})")
 
     # --- brush actions --------------------------------------------------
 
@@ -661,6 +728,29 @@ class AnsiEditorApp(App):
             self.flash(f"[green]✓ saved[/] {path.name}")
         except Exception as e:
             self.flash(f"[red]✗ save failed: {e}[/]")
+
+    def action_save_as(self) -> None:
+        """Prompt for a path, then save. Useful when the user launched without
+        a file arg."""
+        default = str(self._path)
+
+        def _after(path: str | None) -> None:
+            if not path:
+                return
+            self._path = Path(path)
+            self.action_save()
+        self.push_screen(SaveScreen(default), _after)
+
+    def action_help(self) -> None:
+        self.push_screen(HelpScreen())
+
+    def action_palette(self) -> None:
+        self.push_screen(
+            PalettePickerScreen("fg", mode=self.editor.movie.color_format)
+        )
+
+    def action_char_picker(self) -> None:
+        self.push_screen(CharPickerScreen(self.editor.movie.encoding))
 
     def action_load(self) -> None:
         # No modal yet; load the path we were launched with (if it exists).

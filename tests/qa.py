@@ -439,6 +439,28 @@ async def s_tool_press_drag_line_preview_replaces(app, pilot):
         assert layer.get(0, y).ch == "L", (y, layer.get(0, y))
 
 
+async def s_help_screen_opens(app, pilot):
+    """Pressing '?' opens HelpScreen; esc closes it."""
+    await pilot.press("question_mark")
+    await pilot.pause()
+    assert app.screen.__class__.__name__ == "HelpScreen"
+    await pilot.press("escape")
+    await pilot.pause()
+    assert app.screen.__class__.__name__ == "Screen"
+
+
+async def s_palette_strip_pick_sets_fg(app, pilot):
+    """Emitting a PaletteStripPanel.Pick message updates the brush."""
+    from ansi_editor.app import PaletteStripPanel
+    app.editor.brush.fg = 0
+    msg = PaletteStripPanel.Pick(14, "fg")
+    app.on_palette_strip_panel_pick(msg)
+    assert app.editor.brush.fg == 14
+    msg2 = PaletteStripPanel.Pick(4, "bg")
+    app.on_palette_strip_panel_pick(msg2)
+    assert app.editor.brush.bg == 4
+
+
 async def s_mouse_release_without_press_is_safe(app, pilot):
     """Dropping a mouse-up on an editor that wasn't dragging must be a no-op."""
     before_undo = len(app.editor._undo)
@@ -540,6 +562,8 @@ SCENARIOS: list[Scenario] = [
     Scenario("delete_last_frame_is_clamped", s_delete_last_frame_is_clamped),
     Scenario("layer_index_clamps_after_delete", s_layer_index_clamps_after_delete),
     Scenario("resize_preserves_old_cells", s_resize_preserves_old_cells),
+    Scenario("help_screen_opens_and_closes", s_help_screen_opens),
+    Scenario("palette_strip_pick_sets_brush", s_palette_strip_pick_sets_fg),
 ]
 
 
